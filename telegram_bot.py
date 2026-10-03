@@ -4,7 +4,7 @@ import ccxt
 import requests
 
 # আপনার টেলিগ্রাম বট টোকেন এবং চ্যাট আইডি
-TELEGRAM_BOT_TOKEN = "8828383409:AAGzaDGCz4lQnCEIAUhImFyCnMIVj-0ZNso"
+TELEGRAM_BOT_TOKEN = "8987552374:AAHrQelLpyx7CPM-pSBdJRsexiA9pc5vSzw"
 TELEGRAM_CHAT_ID = "6885238220"
 
 # বাইন্যান্স ফিউচার্স এক্সচেঞ্জ কানেকশন (ডেটা চেক করার জন্য)
