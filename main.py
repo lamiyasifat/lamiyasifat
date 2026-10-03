@@ -151,4 +151,10 @@ def start_bot():
 
 
 if __name__ == "__main__":
-  start_bot()
+  while True:
+    try:
+      start_bot()
+    except Exception as e:
+      print(f"⚠️ Bot crashed with error: {e}. Restarting in 5 seconds...")
+      time.sleep(5)
+        
