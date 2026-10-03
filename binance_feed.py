@@ -1,4 +1,5 @@
 import ccxt
+import pandas as pd
 
 # আপনার বাইন্যান্সের অরিজিনাল এপিআই কি এবং সিক্রেট কোড এখানে বসিয়ে দিন
 BINANCE_API_KEY = "JRBhGm1EE3NJGNfRNY8oYJAmd14hptYCn3swXY3M9wQ4ycTCtyUC3SRUbDULhO0V"
@@ -13,31 +14,18 @@ exchange = ccxt.binance({
 })
 
 
-def set_leverage(symbol, leverage=10):
-  """নির্দিষ্ট পেয়ারে লেভারেজ সেট করার ফাংশন"""
-  try:
-    formatted_symbol = symbol.replace('/', '')
-    exchange.fapiPrivate_post_leverage({
-        'symbol': formatted_symbol,
-        'leverage': leverage,
-    })
-  except Exception:
-    pass
-
-
-def get_binance_futures_candles(symbol, timeframe='10m', limit=100):
-  """বাইন্যান্স ফিউচার্স থেকে লাইভ ক্যান্ডেল ডেটা ফেচ করার ফাংশন"""
+def get_binance_futures_candles(symbol, timeframe='1m', limit=100):
+  """বাইন্যান্স ফিউচার্স থেকে লাইভ ক্যান্ডেল ডেটা ফেচ করার ফাংশন (ডিফল্ট ১ মিনিট)"""
   try:
     ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
     if ohlcv:
-      import pandas as pd
-
       df = pd.DataFrame(
           ohlcv,
           columns=['timestamp', 'open', 'high', 'low', 'close', 'volume'],
       )
       df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
       return df
-  except Exception:
-    pass
+  except Exception as e:
+    print(f"Binance API Error for {symbol}: {e}")
   return None
+    
