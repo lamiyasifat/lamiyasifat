@@ -1,7 +1,7 @@
 from datetime import datetime
 import random
 import time
-from binance_api import get_binance_futures_candles
+from binance_feed import get_binance_futures_candles
 from telegram_bot import send_telegram_signal
 
 # ১ থেকে ২০ পর্যন্ত সব স্ট্র্যাটেজির ইম্পোর্ট
