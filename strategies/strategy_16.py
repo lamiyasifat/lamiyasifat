@@ -1,26 +1,39 @@
 def check_setup_16(df):
-    """ Setup 16: Box Resistance Sweep Reversal (PUT) """
-    if len(df) < 8: return None
-    
-    # Box formation (Consolidation Resistance Level)
-    box_candles = df.iloc[-7:-4]
-    box_high = box_candles['high'].max()
-    
-    c_prev = df.iloc[-2] # Previous candle (Market moves down)
-    c_last = df.iloc[-1] # Last candle sweeping liquidity
-    
-    # Candle Types
-    is_c_prev_red = c_prev['close'] < c_prev['open']
-    is_c_last_green = c_last['close'] > c_last['open']
-    
-    if not (is_c_prev_red and is_c_last_green):
-        return None
+    """ Setup 16: Strict Reversal Setup with First-Line Serial Green Check (PUT) """
+    if len(df) < 15: 
+        return None, None
         
-    # Condition: Last green candle breaks and closes above box resistance level
-    c_last_sweeps_resistance = c_last['close'] > box_high
+    # ১. প্রথমার্ধের প্রথম লাইন চেক: মার্কেট প্রথমে ৩টি সিরিয়াল (consecutive) সবুজ ক্যান্ডেল দিয়ে উপরে উঠেছে কিনা
+    # এখানে আমরা বক্সের শুরুর ৩টি ক্যান্ডেল যাচাই করছি
+    c_start1 = df.iloc[-9]
+    c_start2 = df.iloc[-8]
+    c_start3 = df.iloc[-7]
     
-    if c_last_sweeps_resistance:
-        return "PUT"
+    is_initial_serial_green = (c_start1['close'] > c_start1['open']) and \
+                               (c_start2['close'] > c_start2['open']) and \
+                               (c_start3['close'] > c_start3['open'])
+                               
+    if not is_initial_serial_green:
+        return None, None  # প্রথমার্ধের শর্ত না মিললে সাথে সাথে স্কিপ করবে (ফেক সিগন্যাল জিরো টলারেন্স)
         
-    return None
+    # বক্সের রেজিস্ট্যান্স লেভেল নির্ধারণ (ঐ ৩টি সবুজ ক্যান্ডেলের সর্বোচ্চ হাই)
+    resistance_level = max(c_start1['high'], c_start2['high'], c_start3['high'])
+    
+    # ২. মাঝের অংশ: বক্সের পর মার্কেট নিচের দিকে নামবে (Red candles check)
+    intermediate = df.iloc[-6:-2]
+    has_down_movement = any(c['close'] < c['open'] for _, c in intermediate.iterrows())
+    
+    if not has_down_movement:
+        return None, None
+        
+    # ৩. শেষ অংশ: ২নং সবুজ ক্যান্ডেল হয়ে রেজিস্ট্যান্স লেভেল ব্রেক করে উপরে ক্লোজ দেওয়া
+    c_break = df.iloc[-1]
+    is_break_green = c_break['close'] > c_break['open']
+    breaks_resistance = (c_break['close'] > resistance_level) and (c_break['open'] <= resistance_level)
+    
+    # সব শর্ত শতভাগ মিলে গেলে তবেই PUT সিগন্যাল দেবে
+    if is_break_green and breaks_resistance:
+        return "PUT", "Setup-16 (Strict Serial Box Reversal PUT)"
+        
+    return None, None
     
