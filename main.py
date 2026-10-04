@@ -61,13 +61,16 @@ BINANCE_FUTURES_PAIRS = [
     "ARB/USDT", "SUI/USDT", "TIA/USDT", "SEI/USDT", "PEPE/USDT",
 ]
 
-def execute_auto_trade(symbol, signal, amount_usdt=10):
-    """স্বতন্ত্র থ্রেডে চলবে: সিগন্যাল পাওয়া মাত্র ট্রেড ওপেন করবে এবং ঠিক ১ মিনিট পর ক্লোজ করবে"""
+def execute_auto_trade(symbol, signal, amount_usdt=5):
+    """৭ ডলার ব্যালেন্সের জন্য ৫ ডলার করে মাল্টি-থ্রেড অটো ট্রেড এবং ১ মিনিট পর ক্লোজ"""
     try:
-        print(f"⚡ [{symbol}] মাল্টি-থ্রেড অটো ট্রেড শুরু: {signal}...")
+        print(f"⚡ [{symbol}] মাল্টি-থ্রেড অটো ট্রেড শুরু: {signal} ($ {amount_usdt})...")
         ticker = exchange.fetch_ticker(symbol)
         price = ticker['last']
-        amount = amount_usdt / price
+        
+        # অ্যামাউন্ট হিসাব করে এক্সচেঞ্জের নিয়ম অনুযায়ী প্রিসিশন ঠিক করা
+        raw_amount = amount_usdt / price
+        amount = float(exchange.amount_to_precision(symbol, raw_amount))
 
         # CALL হলে BUY (Long), PUT হলে SELL (Short)
         if signal == "CALL":
@@ -81,10 +84,10 @@ def execute_auto_trade(symbol, signal, amount_usdt=10):
 
         print(f"✅ [{symbol}] ট্রেড ওপেন সফল! ১ মিনিট কাউন্টডাউন শুরু...")
         
-        # এই নির্দিষ্ট ট্রেডের জন্য আলাদাভাবে ১ মিনিট (৬০ সেকেন্ড) অপেক্ষা
+        # ঠিক ১ মিনিট (৬০ সেকেন্ড) অপেক্ষা
         time.sleep(60)
 
-        # ১ মিনিট শেষ হওয়ার সাথে সাথে এই পেয়ারের ট্রেড ক্লোজ করা
+        # ১ মিনিট শেষ হওয়ার সাথে সাথে ট্রেড ক্লোজ করা
         print(f"⏳ [{symbol}] ১ মিনিট শেষ! ট্রেড ক্লোজ করা হচ্ছে...")
         if position_side == "BUY":
             exchange.create_market_sell_order(symbol, amount)
@@ -111,7 +114,7 @@ def scan_all_strategies(df):
 
 
 def start_bot():
-    print("🤖 Binance Futures Multi-Threaded Automated Bot Started...")
+    print("🤖 Binance Futures Multi-Threaded Bot Started (7 Dollar Balance Mode)...")
     print(f"📊 Monitoring {len(BINANCE_FUTURES_PAIRS)} pairs with 20 strategies.")
 
     last_scanned_minute = -1
@@ -138,10 +141,10 @@ def start_bot():
                                 # টেলিগ্রাম সিগন্যাল পাঠানো
                                 send_telegram_signal(symbol, setup_name, signal)
                                 
-                                # একসাথে একাধিক ট্রেড নেয়ার জন্য আলাদা থ্রেড (Thread) চালু করা
+                                # ৭ ডলার ব্যালেন্সের জন্য ৫ ডলারের ট্রেড থ্রেড আকারে চালু করা
                                 trade_thread = threading.Thread(
                                     target=execute_auto_trade, 
-                                    args=(symbol, signal, 10)
+                                    args=(symbol, signal, 5)
                                 )
                                 trade_thread.start()
 
@@ -167,6 +170,5 @@ if __name__ == "__main__":
         try:
             start_bot()
         except Exception as e:
-            print(f"⚠️ Bot crashed with error: {e}. Restarting in 5 seconds...")
+            print(f"⚠️️ Bot crashed with error: {e}. Restarting in 5 seconds...")
             time.sleep(5)
-            
