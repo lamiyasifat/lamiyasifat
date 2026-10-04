@@ -1,24 +1,24 @@
 def check_setup_20(df):
-    """ Setup 20: Trend Continuation Setup (PUT) """
-    if len(df) < 5: return None
-    
-    c_trend = df.iloc[-3] # Downtrend Candle
-    c1 = df.iloc[-2]      # 1no Green Candle
-    c2 = df.iloc[-1]      # 2no Red Inside Candle
-    
-    # Candle Types
-    is_c_trend_red = c_trend['close'] < c_trend['open']
-    is_c1_green = c1['close'] > c1['open']
-    is_c2_red = c2['close'] < c2['open']
-    
-    if not (is_c_trend_red and is_c1_green and is_c2_red):
-        return None
+    """ Setup-20: Continuation Setup Inside Body (PUT) """
+    if len(df) < 5: 
+        return None, None
         
-    # Condition: 2no Red candle stays inside 1no Green candle's body (no breakout of c1 body)
-    c2_inside_c1 = c2['close'] > c1['open'] and c2['open'] < c1['close']
+    c2 = df.iloc[-2]  # ১নং সবুজ ক্যান্ডেল
+    c1 = df.iloc[-1]  # ২নং লাল ক্যান্ডেল
     
-    if c2_inside_c1:
-        return "PUT"
+    # শর্ত ১: c2 সবুজ ক্যান্ডেল এবং c1 লাল ক্যান্ডেল হতে হবে
+    is_c2_green = c2['close'] > c2['open']
+    is_c1_red = c1['close'] < c1['open']
+    
+    if not (is_c2_green and is_c1_red):
+        return None, None
         
-    return None
+    # শর্ত ২: লাল ক্যান্ডেলটি সবুজ ক্যান্ডেলের বডির ভেতরে ক্লোজ দেবে এবং লো ব্রেক করবে না
+    closes_inside = (c1['close'] >= c2['open']) and (c1['close'] <= c2['close'])
+    does_not_break_low = c1['low'] >= c2['low']
+    
+    if closes_inside and does_not_break_low:
+        return "PUT", "Setup-20 (Strict Continuation PUT)"
+        
+    return None, None
     
