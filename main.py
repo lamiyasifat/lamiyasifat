@@ -55,7 +55,7 @@ STRATEGY_LIST = [
 BINANCE_FUTURES_PAIRS = [
     "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
     "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT",
-    "MATIC/USDT", "LTC/USDT", "BCH/USDT", "NEAR/USDT", "ATOM/USDT",
+    "POL/USDT", "LTC/USDT", "BCH/USDT", "NEAR/USDT", "ATOM/USDT", # MATIC এর পরিবর্তে POL/USDT আপডেট করা হয়েছে
     "UNI/USDT", "XLM/USDT", "ETC/USDT", "RENDER/USDT", "INJ/USDT",
     "FET/USDT", "AR/USDT", "ICP/USDT", "APT/USDT", "OP/USDT",
     "ARB/USDT", "SUI/USDT", "TIA/USDT", "SEI/USDT", "PEPE/USDT",
@@ -170,5 +170,6 @@ if __name__ == "__main__":
         try:
             start_bot()
         except Exception as e:
-            print(f"⚠️️ Bot crashed with error: {e}. Restarting in 5 seconds...")
+            print(f"⚠ Bot crashed with error: {e}. Restarting in 5 seconds...")
             time.sleep(5)
+        
