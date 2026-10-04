@@ -40,4 +40,4 @@ def check_setup_4(df):
         return "PUT"
         
     return None
-    
+
