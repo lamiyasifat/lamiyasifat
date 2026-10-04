@@ -2,8 +2,8 @@ import ccxt
 import pandas as pd
 
 # আপনার বাইন্যান্সের অরিজিনাল এপিআই কি এবং সিক্রেট কোড
-BINANCE_API_KEY = "JRBhGm1EE3NJGNfRNY8oYJAmd14hptYCn3swXY3M9wQ4ycTCtyUC3SRUbDULhO0V"
-BINANCE_SECRET_KEY = "80Yzz8LCOR6YCYrBSk8z3Z8LEoGRDo08mzxTaV3sDVtyWyt3X3bZVo9J5ab79BkF"
+BINANCE_API_KEY = "mncoq6u6QxoNQiw0IKMxBi1IpRCqtffmcCg7r45757KJkrsPNoWI68qAMMXmzipt"
+BINANCE_SECRET_KEY = "165K38LnOfS7mjcPd3Bt5GuOaEVXY1CgcdTv0sDTg5Mf1REbvnIZvo4dVYBfJPQN"
 
 # বাইন্যান্স ফিউচার্স এক্সচেঞ্জ কানেকশন ইনিশিয়ালাইজ করা
 exchange = ccxt.binance({
