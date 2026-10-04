@@ -1,22 +1,32 @@
 def check_setup_9(df):
-    """ Setup 9: 2 Green + Red Engulfing Reversal (CALL) """
-    if len(df) < 4: return None
+    """ Setup 9: Reversal Setup (CALL) """
+    if len(df) < 10: 
+        return None, None
+        
+    # ক্যান্ডেল ম্যাপিং:
+    # c4 = ছোট লাল ক্যান্ডেল (শুরুর ক্যান্ডেল)
+    # c3 = ১নং সবুজ ক্যান্ডেল (প্রথম সবুজ)
+    # c2 = ১নং-এর মতো ২য় সবুজ ক্যান্ডেল (দ্বিতীয় সবুজ)
+    # c1 = ২নং বড় লাল ক্যান্ডেল (যা আগের সবুজগুলোকে কভার করে নিচে ক্লোজ দেবে)
+    c4 = df.iloc[-4]
+    c3 = df.iloc[-3]
+    c2 = df.iloc[-2]
+    c1 = df.iloc[-1]
     
-    r0 = df.iloc[-4]  # Prior Red Candle
-    g1 = df.iloc[-3]  # 1st Green Candle
-    g2 = df.iloc[-2]  # 2nd Green Candle
-    r3 = df.iloc[-1]  # Large Red Candle
+    # শর্ত ১: শুরুতে একটি লাল ক্যান্ডেল এবং তার পরে পরপর ২টি সবুজ ক্যান্ডেল থাকবে
+    is_c4_red = c4['close'] < c4['open']
+    is_c3_green = c3['close'] > c3['open']
+    is_c2_green = c2['close'] > c2['open']
     
-    # Color sequence check
-    if not (r0['close'] < r0['open'] and g1['close'] > g1['open'] and 
-            g2['close'] > g2['open'] and r3['close'] < r3['open']):
-        return None
+    # শর্ত ২: ২নং ক্যান্ডেলটি (c1) একটি বড় লাল ক্যান্ডেল হবে
+    is_c1_red = c1['close'] < c1['open']
     
-    lowest_green = min(g1['open'], g1['close'], g2['open'], g2['close'])
-    closes_below_both = r3['close'] < lowest_green
-    is_not_gap_down = r3['open'] >= g2['open']  # Fake gap down filter
+    # শর্ত ৩: লাল ক্যান্ডেলটি (c1) সবুজ ক্যান্ডেল দুটির নিচে ক্লোজ দেবে (অর্থাৎ c1-এর low বা close আগের সবুজগুলোর নিচে থাকবে)
+    closes_below_greens = (c1['close'] < c3['low']) and (c1['open'] >= c2['close'])
     
-    if closes_below_both and is_not_gap_down:
-        return "CALL"
-    return None
+    # সব শর্ত ১০০% মিলে গেলে সিগন্যাল দেবে, না হলে স্কিপ করবে
+    if is_c4_red and is_c3_green and is_c2_green and is_c1_red and closes_below_greens:
+        return "CALL", "Setup-9 (Reversal Setup)"
+        
+    return None, None
     
