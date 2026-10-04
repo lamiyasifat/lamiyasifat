@@ -1,24 +1,24 @@
 def check_setup_19(df):
-    """ Setup 19: Trend Continuation Setup (CALL) """
-    if len(df) < 5: return None
-    
-    c_trend = df.iloc[-3] # Uptrend Candle
-    c1 = df.iloc[-2]      # 1no Red Candle
-    c2 = df.iloc[-1]      # 2no Green Inside Candle
-    
-    # Candle Types
-    is_c_trend_green = c_trend['close'] > c_trend['open']
-    is_c1_red = c1['close'] < c1['open']
-    is_c2_green = c2['close'] > c2['open']
-    
-    if not (is_c_trend_green and is_c1_red and is_c2_green):
-        return None
+    """ Setup-19: Continuation Setup Inside Body (CALL) """
+    if len(df) < 5: 
+        return None, None
         
-    # Condition: 2no Green candle stays inside 1no Red candle's body (no breakout of c1 body)
-    c2_inside_c1 = c2['close'] < c1['open'] and c2['open'] > c1['close']
+    c2 = df.iloc[-2]  # ১নং লাল ক্যান্ডেল
+    c1 = df.iloc[-1]  # ২নং সবুজ ক্যান্ডেল
     
-    if c2_inside_c1:
-        return "CALL"
+    # শর্ত ১: c2 লাল ক্যান্ডেল এবং c1 সবুজ ক্যান্ডেল হতে হবে
+    is_c2_red = c2['close'] < c2['open']
+    is_c1_green = c1['close'] > c1['open']
+    
+    if not (is_c2_red and is_c1_green):
+        return None, None
         
-    return None
+    # শর্ত ২: সবুজ ক্যান্ডেলটি লাল ক্যান্ডেলের বডির ভেতরে ক্লোজ দেবে এবং হাই ব্রেক করবে না
+    closes_inside = (c1['close'] <= c2['open']) and (c1['close'] >= c2['close'])
+    does_not_break_high = c1['high'] <= c2['high']
+    
+    if closes_inside and does_not_break_high:
+        return "CALL", "Setup-19 (Strict Continuation CALL)"
+        
+    return None, None
     
