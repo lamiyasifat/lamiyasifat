@@ -14,46 +14,72 @@ OTC_PAIRS = [
 ]
 
 def get_playwright_session():
-    """Playwright ব্যবহার করে অটো-লগইন করে কুকি এবং ইউজার এজেন্ট সংগ্রহ করবে"""
-    print("🌐 Launching Playwright to get session cookies...")
+    """Playwright Stealth এবং হেভি অ্যান্টি-বট আর্গুমেন্ট দিয়ে VPS থেকে লগইন করবে"""
+    print("🌐 Launching VPS Browser to bypass Cloudflare...")
     with sync_playwright() as p:
-        # ব্যাকগ্রাউন্ডে ব্রাউজার রান করার জন্য headless=True ব্যবহার করা হয়েছে
-        browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        # ক্লাউডফ্লেয়ার ডিটেকশন এড়ানোর জন্য ব্রাউজার আর্গুমেন্ট
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--window-size=1920,1080",
+                "--start-maximized"
+            ]
         )
+        
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1920, "height": 1080},
+            device_scale_factor=1,
+            is_mobile=False,
+            has_touch=False
+        )
+        
+        # বট ট্রেস লুকাতে এক্সট্রা জাভাস্ক্রিপ্ট ওভাররাইড
+        context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+        """)
+        
         page = context.new_page()
         
         try:
-            # Quotex লগইন পেজে যাওয়া (Timeout ৬০ সেকেন্ড করা হলো)
-            page.goto("https://qxbroker.com/en/sign-in", timeout=60000)
+            print("⏳ Navigating to Quotex sign-in page...")
+            # পেজ রেন্ডার হওয়ার জন্য রিলায়েবল মোড
+            page.goto("https://qxbroker.com/en/sign-in", timeout=60000, wait_until="domcontentloaded")
             
-            # ইমেইল ইনপুট করা (Timeout ৬০ সেকেন্ড করা হলো যাতে লোড হওয়ার পর্যাপ্ত সময় পায়)
+            # ইমেইল ইনপুট ফিল্ড আসার জন্য পর্যাপ্ত সময় দেওয়া
+            print("✍️ Waiting for login fields...")
             page.wait_for_selector('input[name="email"]', timeout=60000)
-            page.fill('input[name="email"]', QUOTEX_EMAIL)
             
-            # পাসওয়ার্ড ইনপুট করা
+            print("✍️ Entering credentials...")
+            page.fill('input[name="email"]', QUOTEX_EMAIL)
             page.fill('input[name="password"]', QUOTEX_PASSWORD)
             
-            # লগইন বাটনে ক্লিক করা
+            # হিউম্যান বিহেভিওরের মতো সামান্য বিরতি
+            time.sleep(2)
             page.click('button[type="submit"]')
-            print("⏳ Logging in via Playwright...")
+            print("⏳ Logging in, waiting for dashboard...")
             
-            # লগইন সম্পন্ন হওয়ার জন্য অপেক্ষা করা
-            time.sleep(10)
+            # ড্যাশবোর্ড লোড হওয়ার জন্য অপেক্ষা
+            time.sleep(15)
             
-            # কুকি সংগ্রহ করা
             cookies = context.cookies("https://qxbroker.com")
             cookie_str = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
-            
             user_agent = page.evaluate("navigator.userAgent")
             
             browser.close()
-            print("✅ Successfully acquired session cookies via Playwright!")
+            print("✅ Successfully logged in via VPS and acquired session!")
             return cookie_str, user_agent
             
         except Exception as e:
-            print(f"❌ Playwright login error: {e}")
+            print(f"❌ Login error: {e}")
             browser.close()
             return None, None
 
@@ -73,7 +99,6 @@ def on_message(ws, message):
             pass
             
     elif message == '2':
-        # কানেকশন সক্রিয় রাখতে Ping-Pong Response
         ws.send('3')
 
 def on_open(ws):
@@ -91,7 +116,6 @@ def on_close(ws, close_status_code, close_msg):
     print("⚠️ WebSocket Connection Closed")
 
 def start_websocket():
-    # প্লে-রাইটের মাধ্যমে ডায়নামিক কুকি এবং ইউজার এজেন্ট নেওয়া
     cookie_str, user_agent = get_playwright_session()
     
     if not cookie_str:
@@ -120,3 +144,4 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
+    
