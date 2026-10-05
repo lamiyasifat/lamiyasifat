@@ -25,11 +25,11 @@ def get_playwright_session():
         page = context.new_page()
         
         try:
-            # Quotex লগইন পেজে যাওয়া
+            # Quotex লগইন পেজে যাওয়া (Timeout ৬০ সেকেন্ড করা হলো)
             page.goto("https://qxbroker.com/en/sign-in", timeout=60000)
             
-            # ইমেইল ইনপুট করা
-            page.wait_for_selector('input[name="email"]', timeout=15000)
+            # ইমেইল ইনপুট করা (Timeout ৬০ সেকেন্ড করা হলো যাতে লোড হওয়ার পর্যাপ্ত সময় পায়)
+            page.wait_for_selector('input[name="email"]', timeout=60000)
             page.fill('input[name="email"]', QUOTEX_EMAIL)
             
             # পাসওয়ার্ড ইনপুট করা
@@ -120,4 +120,3 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
-                
