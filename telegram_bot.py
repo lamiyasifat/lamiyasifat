@@ -3,7 +3,7 @@ import threading
 import time
 import requests
 
-# Security Config
+# Security Config (Environment Variables থেকে মান নিবে)
 TELEGRAM_BOT_TOKEN = os.getenv(
     "TELEGRAM_BOT_TOKEN", "8987552374:AAHrQelLpyx7CPM-pSBdJRsexiA9pc5vSzw"
 )
@@ -49,7 +49,7 @@ def send_telegram_signal(qtx_ws, pair, setup_name, signal_type):
 
 
 def track_quotex_result(qtx_ws, pair, setup_name, signal_type):
-    """১ মিনিট পর রেজাল্ট (শুধুমাত্র WIN অথবা LOSS) চেক করবে"""
+    """১ মিনিট পর রেজাল্ট (WIN অথবা LOSS) চেক করবে"""
     time.sleep(60)
 
     try:
@@ -64,9 +64,9 @@ def track_quotex_result(qtx_ws, pair, setup_name, signal_type):
             if close_price > open_price:
                 actual_result = "CALL"
             else:
-                actual_result = "PUT"  # Doji বা সমান হলেও PUT ধরা হবে, যা WIN না হলে LOSS নির্দেশ করবে
+                actual_result = "PUT"
 
-            # শুধুমাত্র WIN এবং LOSS ফিল্টার
+            # WIN এবং LOSS ফিল্টার
             if actual_result == signal_type:
                 res_status = "WIN"
                 result_msg = (
@@ -85,9 +85,7 @@ def track_quotex_result(qtx_ws, pair, setup_name, signal_type):
                 )
 
             # রেজাল্ট নোটিফিকেশন
-            url = (
-                f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-            )
+            url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
             requests.post(
                 url,
                 json={
@@ -117,7 +115,7 @@ def track_quotex_result(qtx_ws, pair, setup_name, signal_type):
 
 
 def send_batch_summary(results_list):
-    """২০টি সিগন্যাল শেষে WIN/LOSS সামারি রিপোট পাঠানো"""
+    """২০টি সিগন্যাল শেষে WIN/LOSS সামারি রিপোর্ট পাঠানো"""
     win_count = sum(1 for r in results_list if r["result"] == "WIN")
     loss_count = sum(1 for r in results_list if r["result"] == "LOSS")
     win_rate = round((win_count / BATCH_SIZE) * 100, 2)
@@ -157,4 +155,4 @@ def send_batch_summary(results_list):
         )
     except Exception as e:
         print(f"Batch Telegram Alert Error: {e}")
-                
+
