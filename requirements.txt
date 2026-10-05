@@ -1,4 +1,5 @@
-requests
+websocket-client
 pandas
 ta
-websocket-client
+requests
+python-dotenv
