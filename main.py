@@ -1,9 +1,10 @@
-from datetime import datetime
-import random
 import time
-import threading  # এক সাথে একাধিক ট্রেড চালানোর জন্য থ্রেডিং মডিউল
-import ccxt
-from binance_feed import exchange  # binance_feed.py থেকে এক্সচেঞ্জ অবজেক্ট ইম্পোর্ট
+import random
+import threading
+from datetime import datetime
+
+# আপনার ফাইলগুলো থেকে ইম্পোর্ট
+import quotex_ws
 from telegram_bot import send_telegram_signal
 
 # ১ থেকে ২০ পর্যন্ত সব স্ট্র্যাটেজির ইম্পোর্ট
@@ -27,7 +28,6 @@ from strategies.strategy_17 import check_setup_17
 from strategies.strategy_18 import check_setup_18
 from strategies.strategy_19 import check_setup_19
 from strategies.strategy_20 import check_setup_20
-from binance_feed import get_binance_futures_candles
 
 STRATEGY_LIST = [
     ("Setup 1", check_setup_1),
@@ -52,55 +52,9 @@ STRATEGY_LIST = [
     ("Setup 20", check_setup_20),
 ]
 
-BINANCE_FUTURES_PAIRS = [
-    "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
-    "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT",
-    "POL/USDT", "LTC/USDT", "BCH/USDT", "NEAR/USDT", "ATOM/USDT", # MATIC এর পরিবর্তে POL/USDT আপডেট করা হয়েছে
-    "UNI/USDT", "XLM/USDT", "ETC/USDT", "RENDER/USDT", "INJ/USDT",
-    "FET/USDT", "AR/USDT", "ICP/USDT", "APT/USDT", "OP/USDT",
-    "ARB/USDT", "SUI/USDT", "TIA/USDT", "SEI/USDT", "PEPE/USDT",
-]
-
-def execute_auto_trade(symbol, signal, amount_usdt=5):
-    """৭ ডলার ব্যালেন্সের জন্য ৫ ডলার করে মাল্টি-থ্রেড অটো ট্রেড এবং ১ মিনিট পর ক্লোজ"""
-    try:
-        print(f"⚡ [{symbol}] মাল্টি-থ্রেড অটো ট্রেড শুরু: {signal} ($ {amount_usdt})...")
-        ticker = exchange.fetch_ticker(symbol)
-        price = ticker['last']
-        
-        # অ্যামাউন্ট হিসাব করে এক্সচেঞ্জের নিয়ম অনুযায়ী প্রিসিশন ঠিক করা
-        raw_amount = amount_usdt / price
-        amount = float(exchange.amount_to_precision(symbol, raw_amount))
-
-        # CALL হলে BUY (Long), PUT হলে SELL (Short)
-        if signal == "CALL":
-            order = exchange.create_market_buy_order(symbol, amount)
-            position_side = "BUY"
-        elif signal == "PUT":
-            order = exchange.create_market_sell_order(symbol, amount)
-            position_side = "SELL"
-        else:
-            return
-
-        print(f"✅ [{symbol}] ট্রেড ওপেন সফল! ১ মিনিট কাউন্টডাউন শুরু...")
-        
-        # ঠিক ১ মিনিট (৬০ সেকেন্ড) অপেক্ষা
-        time.sleep(60)
-
-        # ১ মিনিট শেষ হওয়ার সাথে সাথে ট্রেড ক্লোজ করা
-        print(f"⏳ [{symbol}] ১ মিনিট শেষ! ট্রেড ক্লোজ করা হচ্ছে...")
-        if position_side == "BUY":
-            exchange.create_market_sell_order(symbol, amount)
-        else:
-            exchange.create_market_buy_order(symbol, amount)
-            
-        print(f"🔒 [{symbol}] ট্রেড ক্লোজ সম্পন্ন!\n")
-
-    except Exception as e:
-        print(f"❌ অটো ট্রেড এরর [{symbol}]: {e}")
-
 
 def scan_all_strategies(df):
+    """ক্যান্ডেল ডাটা চেক করে ২০টি স্ট্র্যাটেজি টেস্ট করবে"""
     for setup_name, func in STRATEGY_LIST:
         try:
             res = func(df)
@@ -114,9 +68,14 @@ def scan_all_strategies(df):
 
 
 def start_bot():
-    print("🤖 Binance Futures Multi-Threaded Bot Started (7 Dollar Balance Mode)...")
-    print(f"📊 Monitoring {len(BINANCE_FUTURES_PAIRS)} pairs with 20 strategies.")
+    print("🤖 Quotex OTC Telegram Signal Bot Started...")
 
+    # ব্যাকগ্রাউন্ডে Quotex WebSocket চালু করা
+    ws_thread = threading.Thread(target=quotex_ws.start_websocket)
+    ws_thread.daemon = True
+    ws_thread.start()
+
+    time.sleep(5)  # কানেকশন স্ট্যাবল হওয়া পর্যন্ত অপেক্ষা
     last_scanned_minute = -1
 
     while True:
@@ -125,33 +84,30 @@ def start_bot():
             second = now.second
             minute = now.minute
 
+            # প্রতি মিনিটের ৫৮ সেকেন্ডে স্ক্যান হবে
             if second == 58 and minute != last_scanned_minute:
                 last_scanned_minute = minute
                 print(f"\n🔍 Scanning Market at {now.strftime('%H:%M:%S')}...")
 
-                for symbol in BINANCE_FUTURES_PAIRS:
+                for pair in quotex_ws.OTC_PAIRS:
                     try:
-                        df = get_binance_futures_candles(symbol, timeframe='1m', limit=100)
+                        # quotex_ws থেকে পেয়ারের ক্যান্ডেল ডাটা নেওয়া
+                        df = getattr(quotex_ws, "get_pair_df", lambda p: None)(pair)
 
                         if df is not None and not df.empty:
                             setup_name, signal = scan_all_strategies(df)
                             if signal:
-                                print(f"✅ MATCH FOUND! [{symbol}] - {setup_name} -> {signal}")
-                                
-                                # টেলিগ্রাম সিগন্যাল পাঠানো
-                                send_telegram_signal(symbol, setup_name, signal)
-                                
-                                # ৭ ডলার ব্যালেন্সের জন্য ৫ ডলারের ট্রেড থ্রেড আকারে চালু করা
-                                trade_thread = threading.Thread(
-                                    target=execute_auto_trade, 
-                                    args=(symbol, signal, 5)
-                                )
-                                trade_thread.start()
+                                print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal}")
 
-                        time.sleep(random.uniform(0.1, 0.2))
+                                # টেলিগ্রামে সিগন্যাল ও রেজাল্ট ট্র্যাকার পাঠানো
+                                send_telegram_signal(
+                                    quotex_ws, pair, setup_name, signal
+                                )
+
+                        time.sleep(random.uniform(0.05, 0.1))
 
                     except Exception as pair_err:
-                        print(f"⚠️ Error scanning {symbol}: {pair_err}")
+                        print(f"⚠️ Error scanning {pair}: {pair_err}")
 
                 time.sleep(3)
 
@@ -170,6 +126,6 @@ if __name__ == "__main__":
         try:
             start_bot()
         except Exception as e:
-            print(f"⚠ Bot crashed with error: {e}. Restarting in 5 seconds...")
+            print(f"⚠️ Bot crashed with error: {e}. Restarting in 5 seconds...")
             time.sleep(5)
-        
+            
