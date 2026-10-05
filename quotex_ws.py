@@ -2,7 +2,8 @@ import websocket
 import json
 import time
 import ssl
-from config import COOKIE, USER_AGENT
+from playwright.sync_api import sync_playwright
+from config import QUOTEX_EMAIL, QUOTEX_PASSWORD
 
 # ২০টি লাইভ OTC পেয়ার
 OTC_PAIRS = [
@@ -11,6 +12,50 @@ OTC_PAIRS = [
     "NZDUSD_otc", "EURCAD_otc", "EURAUD_otc", "GBPCAD_otc", "GBPAUD_otc",
     "USDIDR_otc", "USDBRL_otc", "USDINR_otc", "UKBrent_otc", "USCrude_otc"
 ]
+
+def get_playwright_session():
+    """Playwright ব্যবহার করে অটো-লগইন করে কুকি এবং ইউজার এজেন্ট সংগ্রহ করবে"""
+    print("🌐 Launching Playwright to get session cookies...")
+    with sync_playwright() as p:
+        # ব্যাকগ্রাউন্ডে ব্রাউজার রান করার জন্য headless=True ব্যবহার করা হয়েছে
+        browser = p.chromium.launch(headless=True, args=["--disable-blink-features=AutomationControlled"])
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        page = context.new_page()
+        
+        try:
+            # Quotex লগইন পেজে যাওয়া
+            page.goto("https://qxbroker.com/en/sign-in", timeout=60000)
+            
+            # ইমেইল ইনপুট করা
+            page.wait_for_selector('input[name="email"]', timeout=15000)
+            page.fill('input[name="email"]', QUOTEX_EMAIL)
+            
+            # পাসওয়ার্ড ইনপুট করা
+            page.fill('input[name="password"]', QUOTEX_PASSWORD)
+            
+            # লগইন বাটনে ক্লিক করা
+            page.click('button[type="submit"]')
+            print("⏳ Logging in via Playwright...")
+            
+            # লগইন সম্পন্ন হওয়ার জন্য অপেক্ষা করা
+            time.sleep(10)
+            
+            # কুকি সংগ্রহ করা
+            cookies = context.cookies("https://qxbroker.com")
+            cookie_str = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
+            
+            user_agent = page.evaluate("navigator.userAgent")
+            
+            browser.close()
+            print("✅ Successfully acquired session cookies via Playwright!")
+            return cookie_str, user_agent
+            
+        except Exception as e:
+            print(f"❌ Playwright login error: {e}")
+            browser.close()
+            return None, None
 
 def on_message(ws, message):
     if message.startswith('42'):
@@ -46,11 +91,19 @@ def on_close(ws, close_status_code, close_msg):
     print("⚠️ WebSocket Connection Closed")
 
 def start_websocket():
+    # প্লে-রাইটের মাধ্যমে ডায়নামিক কুকি এবং ইউজার এজেন্ট নেওয়া
+    cookie_str, user_agent = get_playwright_session()
+    
+    if not cookie_str:
+        print("❌ Failed to get session cookies. Retrying in 10 seconds...")
+        time.sleep(10)
+        return
+
     ws_url = "wss://ws2.qxbroker.com/socket.io/?EIO=3&transport=websocket"
 
     headers = {
-        "User-Agent": USER_AGENT,
-        "Cookie": COOKIE,
+        "User-Agent": user_agent,
+        "Cookie": cookie_str,
         "Origin": "https://qxbroker.com"
     }
 
@@ -67,4 +120,4 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
-  
+                
