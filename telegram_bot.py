@@ -5,7 +5,7 @@ import requests
 from quotex_ws import get_pair_df  # সরাসরি quotex_ws থেকে ইম্পোর্ট করা হলো
 
 # Security Config (Environment Variables বা সরাসরি টোকেন)
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8987552374:AAHrQelLpyx7CPM-pSBdJRsexiA9pc5vSzw")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8569676842:AAE18dypxuwl57uU_GTKRyhJBrhHP_YslDQ")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "6885238220")
 
 # ২০টি সিগন্যাল ট্র্যাক করার গ্লোবাল লিস্ট ও লক
