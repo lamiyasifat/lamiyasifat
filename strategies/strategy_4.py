@@ -53,7 +53,7 @@ class QuotexStrategy4:
 
 # --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
 if __name__ == "__main__":
-    bot = QuotexStrategyFour()
+    bot = QuotexStrategy4()  # এখানে QuotexStrategy4 করে দেওয়া হয়েছে
     
     # ডেমো ডেটা: পরপর ৯টি রেড (১০ম নাম্বারে প্রথম গ্রিন সিগন্যাল দিবে)
     market_candles = ['RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'GREEN']
