@@ -38,7 +38,7 @@ STRATEGY_LIST = [
 ]
 
 def scan_all_strategies(df):
-    """Candle data check kore 12-ti strategy test korbe"""
+    """Candle data check kore 12-ti strategy test korbe ebong signal & step return korbe"""
     try:
         last_candle_color = df.iloc[-1]['color'] if 'color' in df.columns else 'RED'
     except Exception:
@@ -48,10 +48,10 @@ def scan_all_strategies(df):
         try:
             signal, step = strat_obj.analyze_candle(last_candle_color)
             if signal and signal in ["GREEN", "RED"]:
-                return setup_name, signal
+                return setup_name, signal, step
         except Exception:
             continue
-    return None, None
+    return None, None, None
 
 def start_bot():
     print("🤖 Quotex OTC Telegram Signal Bot Started...")
@@ -81,12 +81,12 @@ def start_bot():
                         df = globals().get("get_pair_df", lambda p: None)(pair)
 
                         if df is not None and not df.empty:
-                            setup_name, signal = scan_all_strategies(df)
+                            setup_name, signal, step = scan_all_strategies(df)
                             if signal:
-                                print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal}")
+                                print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal} (Step: {step})")
 
-                                # Telegram-e signal pathano
-                                send_telegram_signal(pair, setup_name, signal)
+                                # Telegram-e signal ebong step pathano
+                                send_telegram_signal(pair, setup_name, signal, step)
 
                         time.sleep(random.uniform(0.05, 0.1))
 
