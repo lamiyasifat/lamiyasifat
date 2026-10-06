@@ -42,13 +42,14 @@ class QuotexStrategy6:
 
 # --- Demo Simulation ---
 if __name__ == "__main__":
-    bot = QuotexStrategyFifteen()
+    bot = QuotexStrategy6()  # সঠিক ক্লাস নাম দেওয়া হলো
     market_candles = ['RED'] * 15 + ['GREEN']
     
-    print("=== Quotex Strategy (15 Red Logic) Simulation Started ===\n")
+    print("=== Quotex Strategy 6 (15 Red Logic) Simulation Started ===\n")
     
     for i, color in enumerate(market_candles, 1):
         print(f"--- Candle #{i} ({color}) ---")
         current_signal, step = bot.analyze_candle(color)
         print(f"Output Signal: {current_signal} | Martingale Step: {step}\n")
         time.sleep(0.1)
+            
