@@ -1,8 +1,8 @@
-import websocket
 import json
 import time
 import ssl
-from playwright.sync_api import sync_playwright
+import websocket
+from curl_cffi import requests
 from config import QUOTEX_EMAIL, QUOTEX_PASSWORD
 
 # ২০টি লাইভ OTC পেয়ার
@@ -13,69 +13,41 @@ OTC_PAIRS = [
     "USDIDR_otc", "USDBRL_otc", "USDINR_otc", "UKBrent_otc", "USCrude_otc"
 ]
 
-def get_playwright_session():
-    """Playwright Stealth এবং Headless=False দিয়ে VPS Virtual Display-তে লগইন করবে"""
-    print("🌐 Launching VPS Browser in Headed Mode to bypass Cloudflare...")
-    with sync_playwright() as p:
-        browser = p.chromium.launch(
-            headless=False,  # Cloudflare bypass korar jonno headless false rakhte hobe
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--disable-infobars",
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--window-size=1920,1080",
-                "--start-maximized"
-            ]
-        )
+def get_session_via_api():
+    """TLS ফিঙ্গারপ্রিন্ট ইমপারসনেশন ব্যবহার করে ব্রাউজার ও কুকিজ ছাড়াই সরাসরি সেশন তৈরি করবে"""
+    print("🌐 Connecting via TLS Fingerprint Impersonation (No Browser)...")
+    
+    # আসল ক্রোম ব্রাউজারের ফিঙ্গারপ্রিন্ট নকল করা
+    session = requests.Session(impersonate="chrome120")
+    
+    login_url = "https://qxbroker.com/en/sign-in"
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+    }
+    
+    try:
+        # ক্লাউডফ্লেয়ার চ্যালেঞ্জ পার করতে সাইন-ইন পেজে রিকোয়েস্ট পাঠানো
+        response = session.get(login_url, headers=headers, timeout=30)
+        print(f"📡 Response Status: {response.status_code}")
         
-        context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            viewport={"width": 1920, "height": 1080},
-            device_scale_factor=1,
-            is_mobile=False,
-            has_touch=False
-        )
-        
-        context.add_init_script("""
-            Object.defineProperty(navigator, 'webdriver', {
-                get: () => undefined
-            });
-        """)
-        
-        page = context.new_page()
-        
-        try:
-            print("⏳ Navigating to Quotex sign-in page...")
-            page.goto("https://qxbroker.com/en/sign-in", timeout=60000, wait_until="domcontentloaded")
-            
-            print("✍️ Waiting for login fields...")
-            page.wait_for_selector('input[name="email"]', timeout=60000)
-            
-            print("✍️ Entering credentials...")
-            page.fill('input[name="email"]', QUOTEX_EMAIL)
-            page.fill('input[name="password"]', QUOTEX_PASSWORD)
-            
-            time.sleep(2)
-            page.click('button[type="submit"]')
-            print("⏳ Logging in, waiting for dashboard...")
-            
-            time.sleep(15)
-            
-            cookies = context.cookies("https://qxbroker.com")
-            cookie_str = "; ".join([f"{c['name']}={c['value']}" for c in cookies])
-            user_agent = page.evaluate("navigator.userAgent")
-            
-            browser.close()
-            print("✅ Successfully logged in via VPS and acquired session!")
-            return cookie_str, user_agent
-            
-        except Exception as e:
-            print(f"❌ Login error: {e}")
-            browser.close()
+        if response.status_code == 403:
+            print("❌ Cloudflare blocked the connection.")
             return None, None
+
+        # সেশনের কুকিজ ও ইউজার এজেন্ট সংগ্রহ করা
+        cookie_dict = session.cookies.get_dict()
+        cookie_str = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
+        user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        
+        print("✅ API Session established successfully without browser!")
+        return cookie_str, user_agent
+        
+    except Exception as e:
+        print(f"❌ API Connection error: {e}")
+        return None, None
 
 def on_message(ws, message):
     if message.startswith('42'):
@@ -87,7 +59,7 @@ def on_message(ws, message):
                 payload = data[1]
                 pair = payload.get("asset", "Unknown")
                 price = payload.get("price", payload.get("close", "N/A"))
-                print(f"│ 📈 [{pair}] ─── Price: {price}")
+                # print(f"│ 📈 [{pair}] ─── Price: {price}")
                 
         except Exception:
             pass
@@ -96,7 +68,7 @@ def on_message(ws, message):
         ws.send('3')
 
 def on_open(ws):
-    print("✅ Connected to Quotex WebSocket!\n")
+    print("✅ Connected to Quotex WebSocket via API Session!\n")
     for pair in OTC_PAIRS:
         subscribe_msg = f'42["asset/subscribe", {{"asset": "{pair}"}}]'
         ws.send(subscribe_msg)
@@ -110,10 +82,10 @@ def on_close(ws, close_status_code, close_msg):
     print("⚠️ WebSocket Connection Closed")
 
 def start_websocket():
-    cookie_str, user_agent = get_playwright_session()
+    cookie_str, user_agent = get_session_via_api()
     
     if not cookie_str:
-        print("❌ Failed to get session cookies. Retrying in 10 seconds...")
+        print("❌ Failed to establish session. Retrying in 10 seconds...")
         time.sleep(10)
         return
 
@@ -138,3 +110,4 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
+        
