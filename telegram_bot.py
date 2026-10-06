@@ -13,7 +13,13 @@ BATCH_SIZE = 20
 
 def send_telegram_signal(pair, setup_name, signal_type, martingale_step=1):
     """Signal ebong Martingale Step telegram-e pathabe"""
-    emoji = "🟢 CALL (BUY)" if signal_type == "CALL" else "🔴 PUT (SELL)"
+    signal_upper = str(signal_type).upper()
+    
+    # GREEN/CALL অথবা RED/PUT উভয় ফরম্যাটের জন্যই ইমোজি হ্যান্ডেল করা হলো
+    if signal_upper in ["GREEN", "CALL"]:
+        emoji = "🟢 CALL (BUY)"
+    else:
+        emoji = "🔴 PUT (SELL)"
     
     # Jodi step 1 er beshi hoy, tahole message-e Martingale step show korbe
     step_info = f"⚡ **Martingale Step:** `{martingale_step}`\n" if martingale_step > 1 else ""
