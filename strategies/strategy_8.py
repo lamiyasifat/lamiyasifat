@@ -53,12 +53,12 @@ class QuotexStrategy8:
 
 # --- Test korar jonno demo simulation ---
 if __name__ == "__main__":
-    bot = QuotexStrategyGreenSeven()
+    bot = QuotexStrategy8()  # সঠিক ক্লাস নাম দেওয়া হলো
     
     # Demo data: Porpor 7-ti green (8 tomo nambare prothom red signal dibe)
     market_candles = ['GREEN'] * 7 + ['RED']
     
-    print("=== Quotex Strategy (7 Green -> Red Logic) Simulation Shuru ===\n")
+    print("=== Quotex Strategy 8 (7 Green -> Red Logic) Simulation Shuru ===\n")
     
     for i, color in enumerate(market_candles, 1):
         print(f"--- Candle #{i} ({color}) ---")
