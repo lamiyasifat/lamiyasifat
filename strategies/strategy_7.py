@@ -1,40 +1,68 @@
-def check_setup_7(df):
-    """ Setup 7: Strict Resistance Pullback Reversal with Exact Match Check (CALL) """
-    if len(df) < 15: 
-        return None, None
+import time
+
+class QuotexStrategyGreenStreak:
+    def __init__(self):
+        self.green_streak = 0
+        self.martingale_step = 1
+        self.is_recovering = False
+
+    def analyze_candle(self, candle_color):
+        """
+        candle_color: 'RED' অথবা 'GREEN' ইনপুট দিতে হবে।
+        আউটপুট রিটার্ন করবে: সিগন্যাল ('RED' অথবা 'WAIT') এবং বর্তমান স্টেপ।
+        """
+        candle_color = candle_color.upper()
+        signal = "WAIT"
+
+        if self.is_recovering:
+            # ৫টি গ্রিন পাওয়ার পর রেড সিগন্যাল দেওয়া হয়েছে, এখন রেজাল্ট চেক করা হচ্ছে
+            if candle_color == 'RED':
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: RED (WIN!) 🎉 | স্টেপ: {self.martingale_step}")
+                print("--> স্ট্র্যাটেজি সফল! রিসেট করা হচ্ছে, নতুন করে ৫টি গ্রিন খোঁজা শুরু...\n")
+                
+                # উইন হওয়ার পর সব রিসেট
+                self.green_streak = 0
+                self.martingale_step = 1
+                self.is_recovering = False
+                signal = "WAIT"
+            else:
+                # যদি ক্যান্ডেলটি গ্রিন হয় (লস), তবে পরেরটার জন্য আবার রেড সিগন্যাল দিতে হবে এবং স্টেপ বাড়াতে হবে
+                self.martingale_step += 1
+                signal = "RED"
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: GREEN (LOSS) ❌ | পরবর্তী সিগন্যাল: **RED** | নতুন মার্টিংগেল স্টেপ: {self.martingale_step}")
         
-    # Dynamic Resistance Calculation (excluding recent candles)
-    res = df['high'].iloc[:-3].rolling(window=20, min_periods=5).max().iloc[-1]
+        else:
+            # স্বাভাবিক অবস্থা: ৫টি গ্রিন ক্যান্ডেল খোঁজা
+            if candle_color == 'GREEN':
+                self.green_streak += 1
+                print(f"[{time.strftime('%H:%M:%S')}] গ্রিন ক্যান্ডেল দেখা গেছে। ধারাবাহিকতা: {self.green_streak}/5")
+                
+                if self.green_streak == 5:
+                    self.is_recovering = True
+                    signal = "RED"
+                    print(f"--> ৫টি গ্রিন পূর্ণ হয়েছে! প্রথম সিগন্যাল: **RED** (স্টেপ: {self.martingale_step})\n")
+            else:
+                # মাঝখানে রেড আসলে গ্রিন কাউন্টার রিসেট হয়ে যাবে
+                if self.green_streak > 0:
+                    print(f"[{time.strftime('%H:%M:%S')}] রেড ক্যান্ডেল আসায় গ্রিন কাউন্ট রিসেট হলো। (আগের কাউন্ট ছিল: {self.green_streak})")
+                self.green_streak = 0
+                signal = "WAIT"
+
+        return signal, self.martingale_step
+
+
+# --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
+if __name__ == "__main__":
+    bot = QuotexStrategyGreenStreak()
     
-    # 1. Prothom dike market upore uthbe (3 ti consecutive green candles er proper check)
-    c6 = df.iloc[-6]
-    c5 = df.iloc[-5]
-    c4 = df.iloc[-4]
+    # ডেমো ডেটা: পরপর ৫টি গ্রিন (৬ষ্ঠ নাম্বারে প্রথম রেড সিগন্যাল দিবে, ধরা যাক ৬ ও ৭ নম্বরও গ্রিন হলো, ৮ নম্বরে রেড এল)
+    market_candles = ['GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'RED']
     
-    is_initial_uptrend = (c6['close'] > c6['open']) and \
-                         (c5['close'] > c5['open']) and \
-                         (c4['close'] > c4['open'])
-                         
-    if not is_initial_uptrend:
-        return None, None  # Condition match na korle immediate skip korbe
-                         
-    # 2. Setup-er sesh 3 ti candle mapping:
-    s7_1 = df.iloc[-3]  # ১নং সবুজ ক্যান্ডেল (breakout)
-    s7_2 = df.iloc[-2]  # ২নং সবুজ ক্যান্ডেল
-    s7_3 = df.iloc[-1]  # ৩নং লাল ক্যান্ডেল (pullback)
+    print("=== কোটেক্স নিউ স্ট্র্যাটেজি (5 Green -> Red Logic) সিমুলেশন শুরু ===\n")
     
-    is_s7_c1_green = s7_1['close'] > s7_1['open']
-    s7_c1_breaks = (s7_1['close'] > res) and (s7_1['open'] <= res)
-    is_s7_c2_green = s7_2['close'] > s7_2['open']
-    is_s7_c3_red = s7_3['close'] < s7_3['open']
-    
-    # 3. SNR Touch & Closing Check (Strict Rule)
-    s7_touches_res = s7_3['low'] <= res * 1.005
-    s7_closes_above_res = s7_3['close'] >= res
-    
-    # Shobguli sharto 100% mile gelei shudu signal dibe, nahole None ferot dibe jate bot onno guli scan korte pare
-    if is_s7_c1_green and s7_c1_breaks and is_s7_c2_green and is_s7_c3_red and s7_touches_res and s7_closes_above_res:
-        return "CALL", "Setup-7 (Strict Resistance Pullback Reversal)"
-        
-    return None, None
-    
+    for i, color in enumerate(market_candles, 1):
+        print(f"--- ক্যান্ডেল #{i} ({color}) ---")
+        current_signal, step = bot.analyze_candle(color)
+        print(f"আউটপুট সিগন্যাল: {current_signal} | মার্টিংগেল স্টেপ: {step}\n")
+        time.sleep(0.5)
+                
