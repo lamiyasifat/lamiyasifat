@@ -1,41 +1,69 @@
-def check_setup_2(df):
-    """ Setup 2: Support Breakout (PUT) - Proper Downtrend Progression & Strict Match """
-    if len(df) < 15: return None
-    
-    # Support Level Calculation (Rolling Low)
-    sup = df['low'].iloc[:-2].rolling(window=20, min_periods=5).min().iloc[-1]
-    
-    # Candles mapping for progression check (Downtrend):
-    c5 = df.iloc[-6]
-    c4 = df.iloc[-5]
-    c3 = df.iloc[-4]
-    c2_prev = df.iloc[-3]
-    c1 = df.iloc[-2]  # 1no Green Candle (Support Touch)
-    c2 = df.iloc[-1]  # 2no Red Candle (Support Breakout)
-    
-    # 1. Market gochiye nicher dike namar (Downtrend Progression) logic:
-    # Aager candle-gulo red hote hobe ebong high/close gulo krome nicher dike namte hobe
-    is_red_sequence = (c5['close'] < c5['open']) and \
-                      (c4['close'] < c4['open']) and \
-                      (c3['close'] < c3['open']) and \
-                      (c2_prev['close'] < c2_prev['open'])
-                      
-    # Progression check: Price consistently lower jacche kina
-    is_price_dropping = (c2_prev['close'] < c3['close']) and (c3['close'] < c4['close'])
-    
-    is_market_falling = is_red_sequence and is_price_dropping
-    
-    # 2. 1no Green candle rules: Low touches support, close above support
-    is_c1_green = c1['close'] > c1['open']
-    c1_touches_sup = (c1['low'] <= sup * 1.005) and (c1['close'] > sup)
-    
-    # 3. 2no Red candle rules: Open near/above support, close below support (Breakout)
-    is_c2_red = c2['close'] < c2['open']
-    c2_breaks_sup = (c2['close'] < sup) and (c2['open'] >= sup)
-    
-    # Shob condition 100% match korlei shudhu PUT signal dispatch hobe
-    if is_market_falling and is_c1_green and c1_touches_sup and is_c2_red and c2_breaks_sup:
-        return "PUT"
+import time
+
+class QuotexStrategyTwo:
+    def __init__(self):
+        self.red_streak = 0
+        self.martingale_step = 1
+        self.is_recovering = False
+
+    def analyze_candle(self, candle_color):
+        """
+        candle_color: 'RED' অথবা 'GREEN' ইনপুট দিতে হবে।
+        আউটপুট রিটার্ন করবে: সিগন্যাল ('GREEN' অথবা 'WAIT') এবং বর্তমান স্টেপ।
+        """
+        candle_color = candle_color.upper()
+        signal = "WAIT"
+
+        if self.is_recovering:
+            # ৬টি রেড পাওয়ার পর সিগন্যাল দেওয়া হয়েছে, এখন রেজাল্ট চেক করা হচ্ছে
+            if candle_color == 'GREEN':
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: GREEN (WIN!) 🎉 | স্টেপ: {self.martingale_step}")
+                print("--> স্ট্র্যাটেজি সফল! রিসেট করা হচ্ছে, নতুন করে ৬টি রেড খোঁজা শুরু...\n")
+                
+                # উইন হওয়ার পর সব রিসেট
+                self.red_streak = 0
+                self.martingale_step = 1
+                self.is_recovering = False
+                signal = "WAIT"
+            else:
+                # যদি ক্যান্ডেলটি রেড হয় (লস), তবে পরেরটার জন্য আবার গ্রিন সিগন্যাল দিতে হবে এবং স্টেপ বাড়াতে হবে
+                self.martingale_step += 1
+                signal = "GREEN"
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: RED (LOSS) ❌ | পরবর্তী সিগন্যাল: **GREEN** | নতুন মার্টিংগেল স্টেপ: {self.martingale_step}")
         
-    return None
+        else:
+            # স্বাভাবিক অবস্থা: ৬টি রেড ক্যান্ডেল খোঁজা
+            if candle_color == 'RED':
+                self.red_streak += 1
+                print(f"[{time.strftime('%H:%M:%S')}] রেড ক্যান্ডেল দেখা গেছে। ধারাবাহিকতা: {self.red_streak}/6")
+                
+                if self.red_streak == 6:
+                    self.is_recovering = True
+                    signal = "GREEN"
+                    print(f"--> ৬টি রেড পূর্ণ হয়েছে! প্রথম সিগন্যাল: **GREEN** (স্টেপ: {self.martingale_step})\n")
+            else:
+                # মাঝখানে গ্রিন আসলে রেড কাউন্টার রিসেট হয়ে যাবে
+                if self.red_streak > 0:
+                    print(f"[{time.strftime('%H:%M:%S')}] গ্রিন ক্যান্ডেল আসায় রেড কাউন্ট রিসেট হলো। (আগের কাউন্ট ছিল: {self.red_streak})")
+                self.red_streak = 0
+                signal = "WAIT"
+
+        return signal, self.martingale_step
+
+
+# --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
+if __name__ == "__main__":
+    bot = QuotexStrategyTwo()
     
+    # ডেমো ডেটা: পরপর ৬টি রেড (৭ম নাম্বারে প্রথম গ্রিন সিগন্যাল দিবে)
+    # ধরা যাক ৭ ও ৮ নম্বর ক্যান্ডেলও রেড হলো, আর ৯ নম্বর ক্যান্ডেল গ্রিন হলো
+    market_candles = ['RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'RED', 'GREEN']
+    
+    print("=== কোটেক্স স্ট্র্যাটেজি ২ (6 Red Logic) সিমুলেশন শুরু ===\n")
+    
+    for i, color in enumerate(market_candles, 1):
+        print(f"--- ক্যান্ডেল #{i} ({color}) ---")
+        current_signal, step = bot.analyze_candle(color)
+        print(f"আউটপুট সিগন্যাল: {current_signal} | মার্টিংগেল স্টেপ: {step}\n")
+        time.sleep(0.5)
+                    
