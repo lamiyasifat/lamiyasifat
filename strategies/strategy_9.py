@@ -1,32 +1,68 @@
-def check_setup_9(df):
-    """ Setup 9: Reversal Setup (CALL) """
-    if len(df) < 10: 
-        return None, None
+import time
+
+class QuotexStrategyGreenNine:
+    def __init__(self):
+        self.green_streak = 0
+        self.martingale_step = 1
+        self.is_recovering = False
+
+    def analyze_candle(self, candle_color):
+        """
+        candle_color: 'RED' অথবা 'GREEN' ইনপুট দিতে হবে।
+        আউটপুট রিটার্ন করবে: সিগন্যাল ('RED' অথবা 'WAIT') এবং বর্তমান স্টেপ।
+        """
+        candle_color = candle_color.upper()
+        signal = "WAIT"
+
+        if self.is_recovering:
+            # ৯টি গ্রিন পাওয়ার পর রেড সিগন্যাল দেওয়া হয়েছে, এখন রেজাল্ট চেক করা হচ্ছে
+            if candle_color == 'RED':
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: RED (WIN!) 🎉 | স্টেপ: {self.martingale_step}")
+                print("--> স্ট্র্যাটেজি সফল! রিসেট করা হচ্ছে, নতুন করে ৯টি গ্রিন খোঁজা শুরু...\n")
+                
+                # উইন হওয়ার পর সব রিসেট
+                self.green_streak = 0
+                self.martingale_step = 1
+                self.is_recovering = False
+                signal = "WAIT"
+            else:
+                # যদি ক্যান্ডেলটি গ্রিন হয় (লস), তবে পরেরটার জন্য আবার রেড সিগন্যাল দিতে হবে এবং স্টেপ বাড়াতে হবে
+                self.martingale_step += 1
+                signal = "RED"
+                print(f"[{time.strftime('%H:%M:%S')}] রেজাল্ট: GREEN (LOSS) ❌ | পরবর্তী সিগন্যাল: **RED** | নতুন মার্টিংগেল স্টেপ: {self.martingale_step}")
         
-    # ক্যান্ডেল ম্যাপিং:
-    # c4 = ছোট লাল ক্যান্ডেল (শুরুর ক্যান্ডেল)
-    # c3 = ১নং সবুজ ক্যান্ডেল (প্রথম সবুজ)
-    # c2 = ১নং-এর মতো ২য় সবুজ ক্যান্ডেল (দ্বিতীয় সবুজ)
-    # c1 = ২নং বড় লাল ক্যান্ডেল (যা আগের সবুজগুলোকে কভার করে নিচে ক্লোজ দেবে)
-    c4 = df.iloc[-4]
-    c3 = df.iloc[-3]
-    c2 = df.iloc[-2]
-    c1 = df.iloc[-1]
+        else:
+            # স্বাভাবিক অবস্থা: ৯টি গ্রিন ক্যান্ডেল খোঁজা
+            if candle_color == 'GREEN':
+                self.green_streak += 1
+                print(f"[{time.strftime('%H:%M:%S')}] গ্রিন ক্যান্ডেল দেখা গেছে। ধারাবাহিকতা: {self.green_streak}/9")
+                
+                if self.green_streak == 9:
+                    self.is_recovering = True
+                    signal = "RED"
+                    print(f"--> ৯টি গ্রিন পূর্ণ হয়েছে! প্রথম সিগন্যাল: **RED** (স্টেপ: {self.martingale_step})\n")
+            else:
+                # মাঝখানে রেড আসলে গ্রিন কাউন্টার রিসেট হয়ে যাবে
+                if self.green_streak > 0:
+                    print(f"[{time.strftime('%H:%M:%S')}] রেড ক্যান্ডেল আসায় গ্রিন কাউন্ট রিসেট হলো। (আগের কাউন্ট ছিল: {self.green_streak})")
+                self.green_streak = 0
+                signal = "WAIT"
+
+        return signal, self.martingale_step
+
+
+# --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
+if __name__ == "__main__":
+    bot = QuotexStrategyGreenNine()
     
-    # শর্ত ১: শুরুতে একটি লাল ক্যান্ডেল এবং তার পরে পরপর ২টি সবুজ ক্যান্ডেল থাকবে
-    is_c4_red = c4['close'] < c4['open']
-    is_c3_green = c3['close'] > c3['open']
-    is_c2_green = c2['close'] > c2['open']
+    # ডেমো ডেটা: পরপর ৯টি গ্রিন (১০ম নাম্বারে প্রথম রেড সিগন্যাল দিবে)
+    market_candles = ['GREEN'] * 9 + ['RED']
     
-    # শর্ত ২: ২নং ক্যান্ডেলটি (c1) একটি বড় লাল ক্যান্ডেল হবে
-    is_c1_red = c1['close'] < c1['open']
+    print("=== কোটেক্স স্ট্র্যাটেজি (9 Green -> Red Logic) সিমুলেশন শুরু ===\n")
     
-    # শর্ত ৩: লাল ক্যান্ডেলটি (c1) সবুজ ক্যান্ডেল দুটির নিচে ক্লোজ দেবে (অর্থাৎ c1-এর low বা close আগের সবুজগুলোর নিচে থাকবে)
-    closes_below_greens = (c1['close'] < c3['low']) and (c1['open'] >= c2['close'])
-    
-    # সব শর্ত ১০০% মিলে গেলে সিগন্যাল দেবে, না হলে স্কিপ করবে
-    if is_c4_red and is_c3_green and is_c2_green and is_c1_red and closes_below_greens:
-        return "CALL", "Setup-9 (Reversal Setup)"
+    for i, color in enumerate(market_candles, 1):
+        print(f"--- ক্যান্ডেল #{i} ({color}) ---")
+        current_signal, step = bot.analyze_candle(color)
+        print(f"আউটপুট সিগন্যাল: {current_signal} | মার্টিংগেল স্টেপ: {step}\n")
+        time.sleep(0.5)
         
-    return None, None
-    
