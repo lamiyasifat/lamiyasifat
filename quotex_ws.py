@@ -2,6 +2,8 @@ import json
 import time
 import ssl
 import websocket
+import pandas as pd
+from collections import defaultdict
 from curl_cffi import requests
 from config import QUOTEX_EMAIL, QUOTEX_PASSWORD
 
@@ -11,6 +13,16 @@ OTC_PAIRS = [
     "NZDUSD_otc", "EURCAD_otc", "EURAUD_otc", "GBPCAD_otc", "GBPAUD_otc",
     "USDIDR_otc", "USDBRL_otc", "USDINR_otc", "UKBrent_otc", "USCrude_otc"
 ]
+
+# Proti pair-er candle data store korar jonno dictionary
+market_data = defaultdict(list)
+
+def get_pair_df(pair):
+    """Main.py theke call korle ei function candle data dataframe hisebe dibe"""
+    if pair in market_data and len(market_data[pair]) > 0:
+        df = pd.DataFrame(market_data[pair])
+        return df
+    return pd.DataFrame()
 
 def get_token_without_cookies():
     print("🌐 Authenticating via Direct API...")
@@ -39,6 +51,32 @@ def on_open(ws):
 def on_message(ws, message):
     if message == '2':
         ws.send('3')
+        return
+    
+    try:
+        if message.startswith("42"):
+            data = json.loads(message[2:])
+            if isinstance(data, list) and len(data) > 1:
+                event_name = data[0]
+                payload = data[1]
+                
+                # Live candle data handle kora
+                if "chart" in event_name or isinstance(payload, dict):
+                    asset = payload.get("asset")
+                    if asset in OTC_PAIRS:
+                        candle = {
+                            "time": payload.get("time", time.time()),
+                            "open": float(payload.get("open", 0)),
+                            "high": float(payload.get("high", 0)),
+                            "low": float(payload.get("low", 0)),
+                            "close": float(payload.get("close", 0))
+                        }
+                        market_data[asset].append(candle)
+                        # Maximum 100 ti candle store kore memory clean rakha hobe
+                        if len(market_data[asset]) > 100:
+                            market_data[asset].pop(0)
+    except Exception as e:
+        pass
 
 def start_websocket():
     cookie_str, user_agent = get_token_without_cookies()
@@ -55,3 +93,4 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
+    
