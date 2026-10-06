@@ -53,16 +53,16 @@ class QuotexStrategy11:
 
 # --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
 if __name__ == "__main__":
-    bot = QuotexStrategyGreenFifteen()
+    bot = QuotexStrategy11()  # সঠিক ক্লাস নাম দেওয়া হলো
     
     # ডেমো ডেটা: পরপর ১৫টি গ্রিন (১৬তম নাম্বারে প্রথম রেড সিগন্যাল দিবে)
     market_candles = ['GREEN'] * 15 + ['RED']
     
-    print("=== কোটেক্স স্ট্র্যাটেজি (15 Green -> Red Logic) সিমুলেশন শুরু ===\n")
+    print("=== কোটেক্স স্ট্র্যাটেজি ১১ (15 Green -> Red Logic) সিমুলেশন শুরু ===\n")
     
     for i, color in enumerate(market_candles, 1):
         print(f"--- ক্যান্ডেল #{i} ({color}) ---")
         current_signal, step = bot.analyze_candle(color)
         print(f"আউটপুট সিগন্যাল: {current_signal} | মার্টিংগেল স্টেপ: {step}\n")
         time.sleep(0.5)
-        
+                
