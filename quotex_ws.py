@@ -60,21 +60,23 @@ def on_message(ws, message):
                 event_name = data[0]
                 payload = data[1]
                 
-                # Live candle data handle kora
-                if "chart" in event_name or isinstance(payload, dict):
-                    asset = payload.get("asset")
-                    if asset in OTC_PAIRS:
-                        candle = {
-                            "time": payload.get("time", time.time()),
-                            "open": float(payload.get("open", 0)),
-                            "high": float(payload.get("high", 0)),
-                            "low": float(payload.get("low", 0)),
-                            "close": float(payload.get("close", 0))
-                        }
-                        market_data[asset].append(candle)
-                        # Maximum 100 ti candle store kore memory clean rakha hobe
-                        if len(market_data[asset]) > 100:
-                            market_data[asset].pop(0)
+                # Payload jodi list ba dictionary hoy, amra asset khuje ber korbo
+                items = payload if isinstance(payload, list) else [payload]
+                for item in items:
+                    if isinstance(item, dict):
+                        asset = item.get("asset") or item.get("symbol")
+                        if asset in OTC_PAIRS:
+                            candle = {
+                                "time": item.get("time", time.time()),
+                                "open": float(item.get("open", 0)),
+                                "high": float(item.get("high", 0)),
+                                "low": float(item.get("low", 0)),
+                                "close": float(item.get("close", 0))
+                            }
+                            market_data[asset].append(candle)
+                            # Maximum 100 ti candle store kore memory clean rakha hobe
+                            if len(market_data[asset]) > 100:
+                                market_data[asset].pop(0)
     except Exception as e:
         pass
 
