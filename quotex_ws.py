@@ -14,12 +14,11 @@ OTC_PAIRS = [
 ]
 
 def get_playwright_session():
-    """Playwright Stealth এবং হেভি অ্যান্টি-বট আর্গুমেন্ট দিয়ে VPS থেকে লগইন করবে"""
-    print("🌐 Launching VPS Browser to bypass Cloudflare...")
+    """Playwright Stealth এবং Headless=False দিয়ে VPS Virtual Display-তে লগইন করবে"""
+    print("🌐 Launching VPS Browser in Headed Mode to bypass Cloudflare...")
     with sync_playwright() as p:
-        # ক্লাউডফ্লেয়ার ডিটেকশন এড়ানোর জন্য ব্রাউজার আর্গুমেন্ট
         browser = p.chromium.launch(
-            headless=True,
+            headless=False,  # Cloudflare bypass korar jonno headless false rakhte hobe
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--disable-infobars",
@@ -40,7 +39,6 @@ def get_playwright_session():
             has_touch=False
         )
         
-        # বট ট্রেস লুকাতে এক্সট্রা জাভাস্ক্রিপ্ট ওভাররাইড
         context.add_init_script("""
             Object.defineProperty(navigator, 'webdriver', {
                 get: () => undefined
@@ -51,10 +49,8 @@ def get_playwright_session():
         
         try:
             print("⏳ Navigating to Quotex sign-in page...")
-            # পেজ রেন্ডার হওয়ার জন্য রিলায়েবল মোড
             page.goto("https://qxbroker.com/en/sign-in", timeout=60000, wait_until="domcontentloaded")
             
-            # ইমেইল ইনপুট ফিল্ড আসার জন্য পর্যাপ্ত সময় দেওয়া
             print("✍️ Waiting for login fields...")
             page.wait_for_selector('input[name="email"]', timeout=60000)
             
@@ -62,12 +58,10 @@ def get_playwright_session():
             page.fill('input[name="email"]', QUOTEX_EMAIL)
             page.fill('input[name="password"]', QUOTEX_PASSWORD)
             
-            # হিউম্যান বিহেভিওরের মতো সামান্য বিরতি
             time.sleep(2)
             page.click('button[type="submit"]')
             print("⏳ Logging in, waiting for dashboard...")
             
-            # ড্যাশবোর্ড লোড হওয়ার জন্য অপেক্ষা
             time.sleep(15)
             
             cookies = context.cookies("https://qxbroker.com")
@@ -144,4 +138,3 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
-    
