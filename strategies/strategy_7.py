@@ -42,7 +42,7 @@ class QuotexStrategy7:
                     signal = "RED"
                     print(f"--> ৫টি গ্রিন পূর্ণ হয়েছে! প্রথম সিগন্যাল: **RED** (স্টেপ: {self.martingale_step})\n")
             else:
-                # মাঝখানে রেড আসলে গ্রিন কাউন্টার রিসেট হয়ে যাবে
+                # মাঝখানে রেড আসলে গ্রিন কাউন্ট রিসেট হয়ে যাবে
                 if self.green_streak > 0:
                     print(f"[{time.strftime('%H:%M:%S')}] রেড ক্যান্ডেল আসায় গ্রিন কাউন্ট রিসেট হলো। (আগের কাউন্ট ছিল: {self.green_streak})")
                 self.green_streak = 0
@@ -53,16 +53,16 @@ class QuotexStrategy7:
 
 # --- টেস্ট করার জন্য ডেমো সিমুলেশন ---
 if __name__ == "__main__":
-    bot = QuotexStrategyGreenStreak()
+    bot = QuotexStrategy7()  # সঠিক ক্লাস নাম দেওয়া হলো
     
     # ডেমো ডেটা: পরপর ৫টি গ্রিন (৬ষ্ঠ নাম্বারে প্রথম রেড সিগন্যাল দিবে, ধরা যাক ৬ ও ৭ নম্বরও গ্রিন হলো, ৮ নম্বরে রেড এল)
     market_candles = ['GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'GREEN', 'RED']
     
-    print("=== কোটেক্স নিউ স্ট্র্যাটেজি (5 Green -> Red Logic) সিমুলেশন শুরু ===\n")
+    print("=== কোটেক্স স্ট্র্যাটেজি ৭ (5 Green -> Red Logic) সিমুলেশন শুরু ===\n")
     
     for i, color in enumerate(market_candles, 1):
         print(f"--- ক্যান্ডেল #{i} ({color}) ---")
         current_signal, step = bot.analyze_candle(color)
         print(f"আউটপুট সিগন্যাল: {current_signal} | মার্টিংগেল স্টেপ: {step}\n")
         time.sleep(0.5)
-                
+        
