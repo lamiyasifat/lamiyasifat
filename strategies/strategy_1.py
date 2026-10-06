@@ -1,6 +1,6 @@
 import time
 
-class QuotexStrategy:
+class QuotexStrategy 1:
     def __init__(self):
         self.red_streak = 0
         self.martingale_step = 1
