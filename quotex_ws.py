@@ -74,6 +74,10 @@ def on_message(ws, message):
                                 "close": float(item.get("close", 0))
                             }
                             market_data[asset].append(candle)
+                            
+                            # লাইভ ডেটা আসার বিষয়টি টার্মিনালে দেখার জন্য প্রিন্ট যোগ করা হলো
+                            print(f"📥 Received Candle for {asset}: Close={candle['close']}")
+
                             # Maximum 100 ti candle store kore memory clean rakha hobe
                             if len(market_data[asset]) > 100:
                                 market_data[asset].pop(0)
@@ -95,4 +99,4 @@ def start_websocket():
 
 if __name__ == "__main__":
     start_websocket()
-    
+            
