@@ -44,8 +44,15 @@ def start_websocket():
             print(f"❌ Login failed: {login_res.text}")
             return
             
+        # Session theke cookies collect kore headers-e add kora holo
+        cookie_dict = session.cookies.get_dict()
+        cookie_str = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
+        headers["Cookie"] = cookie_str
+            
         poll_url = "https://ws2.qxbroker.com/socket.io/?EIO=3&transport=polling"
         poll_res = session.get(poll_url, headers=headers, timeout=15)
+        
+        print(f"Polling Status: {poll_res.status_code}, Response: {poll_res.text[:150]}")
         
         if poll_res.status_code == 200:
             match = re.search(r'"sid":"([^"]+)"', poll_res.text) or re.search(r'\\"sid\\":\\"([^\\"]+)\\"', poll_res.text)
@@ -108,11 +115,11 @@ def start_websocket():
                     print(f"⚠️ Polling loop error: {loop_e}")
                     time.sleep(2)
         else:
-            print("❌ Polling Handshake Failed.")
+            print(f"❌ Polling Handshake Failed. Status: {poll_res.status_code}")
             
     except Exception as e:
         print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     start_websocket()
-        
+                
