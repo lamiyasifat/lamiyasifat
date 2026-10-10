@@ -74,7 +74,6 @@ def start_bot():
 
                 for pair in OTC_PAIRS:
                     try:
-                        #quotex_ws.py er get_pair_df function call hobe
                         df = get_pair_df(pair)
 
                         if df is not None and not df.empty:
@@ -82,9 +81,6 @@ def start_bot():
                             if signal:
                                 print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal} (Step: {step})")
                                 send_telegram_signal(pair, setup_name, signal, step)
-                        else:
-                            # Debugging er jonno jate bojha jay data asche kina
-                            pass
 
                         time.sleep(random.uniform(0.05, 0.1))
 
