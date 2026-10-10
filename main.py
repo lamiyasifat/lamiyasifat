@@ -4,7 +4,7 @@ import random
 import threading
 from datetime import datetime
 
-# quotex_ws.py theke start_websocket, OTC_PAIRS ebong get_pair_df import kora holo
+# quotex_ws.py thread connection and data ingestion
 from quotex_ws import start_websocket, OTC_PAIRS, get_pair_df
 
 # Telegram ebong 12-ti strategy import
@@ -22,34 +22,47 @@ from strategies.strategy_10 import QuotexStrategy10
 from strategies.strategy_11 import QuotexStrategy11
 from strategies.strategy_12 import QuotexStrategy12
 
-STRATEGY_LIST = [
-    ("Strategy 1", QuotexStrategy1()),
-    ("Strategy 2", QuotexStrategy2()),
-    ("Strategy 3", QuotexStrategy3()),
-    ("Strategy 4", QuotexStrategy4()),
-    ("Strategy 5", QuotexStrategy5()),
-    ("Strategy 6", QuotexStrategy6()),
-    ("Strategy 7", QuotexStrategy7()),
-    ("Strategy 8", QuotexStrategy8()),
-    ("Strategy 9", QuotexStrategy9()),
-    ("Strategy 10", QuotexStrategy10()),
-    ("Strategy 11", QuotexStrategy11()),
-    ("Strategy 12", QuotexStrategy12()),
+STRATEGY_CLASSES = [
+    ("Strategy 1", QuotexStrategy1),
+    ("Strategy 2", QuotexStrategy2),
+    ("Strategy 3", QuotexStrategy3),
+    ("Strategy 4", QuotexStrategy4),
+    ("Strategy 5", QuotexStrategy5),
+    ("Strategy 6", QuotexStrategy6),
+    ("Strategy 7", QuotexStrategy7),
+    ("Strategy 8", QuotexStrategy8),
+    ("Strategy 9", QuotexStrategy9),
+    ("Strategy 10", QuotexStrategy10),
+    ("Strategy 11", QuotexStrategy11),
+    ("Strategy 12", QuotexStrategy12),
 ]
 
-def scan_all_strategies(df):
-    try:
-        last_candle_color = df.iloc[-1]['color'] if 'color' in df.columns else 'RED'
-    except Exception:
-        last_candle_color = 'RED'
+def analyze_pair_history(df):
+    """Pura Candle History ta har ek strategy-te sequentially run kore signal check korbe"""
+    if df is None or df.empty or 'color' not in df.columns:
+        return None, None, None
 
-    for setup_name, strat_obj in STRATEGY_LIST:
+    colors = df['color'].tolist()
+    
+    # Proti pair scanning-er shomoy notun fresh strategy state use hobe jate memory mix na hoy
+    for setup_name, StratClass in STRATEGY_CLASSES:
         try:
-            signal, step = strat_obj.analyze_candle(last_candle_color)
-            if signal and signal in ["GREEN", "RED"]:
-                return setup_name, signal, step
+            strat_inst = StratClass()
+            final_signal = "WAIT"
+            final_step = 1
+            
+            # History-r sob candle serial-e analyze korbe
+            for c_color in colors:
+                sig, step = strat_inst.analyze_candle(c_color)
+                if sig and sig != "WAIT":
+                    final_signal = sig
+                    final_step = step
+
+            if final_signal in ["GREEN", "RED", "CALL", "PUT"]:
+                return setup_name, final_signal, final_step
         except Exception:
             continue
+            
     return None, None, None
 
 def start_bot():
@@ -77,12 +90,12 @@ def start_bot():
                         df = get_pair_df(pair)
 
                         if df is not None and not df.empty:
-                            setup_name, signal, step = scan_all_strategies(df)
+                            setup_name, signal, step = analyze_pair_history(df)
                             if signal:
-                                print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal} (Step: {step})")
+                                print(f"✅ MATCH FOUND! [{pair}] -> {setup_name} | Signal: {signal} (Step: {step})")
                                 send_telegram_signal(pair, setup_name, signal, step)
 
-                        time.sleep(random.uniform(0.05, 0.1))
+                        time.sleep(random.uniform(0.02, 0.05))
 
                     except Exception as pair_err:
                         print(f"⚠️ Error scanning {pair}: {pair_err}")
@@ -105,4 +118,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Bot crashed with error: {e}. Restarting in 5 seconds...")
             time.sleep(5)
-    
