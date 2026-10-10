@@ -4,10 +4,10 @@ import random
 import threading
 from datetime import datetime
 
-# quotex_ws.py theke websocket ba data fetch function import korben
-from quotex_ws import start_websocket, OTC_PAIRS
+# quotex_ws.py theke start_websocket, OTC_PAIRS ebong get_pair_df import kora holo
+from quotex_ws import start_websocket, OTC_PAIRS, get_pair_df
 
-# Telegram ebong 12-ti strategy import (Apnar github folder structure anujayi)
+# Telegram ebong 12-ti strategy import
 from telegram_bot import send_telegram_signal
 from strategies.strategy_1 import QuotexStrategy1
 from strategies.strategy_2 import QuotexStrategy2
@@ -38,7 +38,6 @@ STRATEGY_LIST = [
 ]
 
 def scan_all_strategies(df):
-    """Candle data check kore 12-ti strategy test korbe ebong signal & step return korbe"""
     try:
         last_candle_color = df.iloc[-1]['color'] if 'color' in df.columns else 'RED'
     except Exception:
@@ -56,12 +55,11 @@ def scan_all_strategies(df):
 def start_bot():
     print("🤖 Quotex OTC Telegram Signal Bot Started...")
 
-    # Background-e Quotex WebSocket (TLS API session) chalu kora
     ws_thread = threading.Thread(target=start_websocket)
     ws_thread.daemon = True
     ws_thread.start()
 
-    time.sleep(5)  # Connection stable howa porjonto oppikkha
+    time.sleep(5)
     last_scanned_minute = -1
 
     while True:
@@ -70,23 +68,23 @@ def start_bot():
             second = now.second
             minute = now.minute
 
-            # Proti minute-er 58 second-e scan hobe
             if second == 58 and minute != last_scanned_minute:
                 last_scanned_minute = minute
                 print(f"\n🔍 Scanning Market at {now.strftime('%H:%M:%S')}...")
 
                 for pair in OTC_PAIRS:
                     try:
-                        # Pair-er candle data niye asar function 
-                        df = globals().get("get_pair_df", lambda p: None)(pair)
+                        #quotex_ws.py er get_pair_df function call hobe
+                        df = get_pair_df(pair)
 
                         if df is not None and not df.empty:
                             setup_name, signal, step = scan_all_strategies(df)
                             if signal:
                                 print(f"✅ MATCH FOUND! [{pair}] - {setup_name} -> {signal} (Step: {step})")
-
-                                # Telegram-e signal ebong step pathano
                                 send_telegram_signal(pair, setup_name, signal, step)
+                        else:
+                            # Debugging er jonno jate bojha jay data asche kina
+                            pass
 
                         time.sleep(random.uniform(0.05, 0.1))
 
@@ -111,4 +109,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Bot crashed with error: {e}. Restarting in 5 seconds...")
             time.sleep(5)
-            
+    
