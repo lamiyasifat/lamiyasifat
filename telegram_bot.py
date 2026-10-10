@@ -4,7 +4,7 @@ import time
 import requests
 from quotex_ws import get_pair_df
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8569676842:AAE18dypxuwl57uU_GTKRyhJBrhHP_YslDQ")
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "8567903905:AAH3CUwkPDQBpmE2V2bw9yBmPixN0b3hSnU")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "6885238220")
 
 completed_results = []
