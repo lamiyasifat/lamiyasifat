@@ -15,13 +15,11 @@ def send_telegram_signal(pair, setup_name, signal_type, martingale_step=1):
     """Signal ebong Martingale Step telegram-e pathabe"""
     signal_upper = str(signal_type).upper()
     
-    # GREEN/CALL অথবা RED/PUT উভয় ফরম্যাটের জন্যই ইমোজি হ্যান্ডেল করা হলো
     if signal_upper in ["GREEN", "CALL"]:
         emoji = "🟢 CALL (BUY)"
     else:
         emoji = "🔴 PUT (SELL)"
     
-    # Jodi step 1 er beshi hoy, tahole message-e Martingale step show korbe
     step_info = f"⚡ **Martingale Step:** `{martingale_step}`\n" if martingale_step > 1 else ""
     
     message = (
@@ -61,8 +59,12 @@ def track_quotex_result(pair, setup_name, signal_type):
             open_price = float(last_candle["open"])
             close_price = float(last_candle["close"])
             
+            # Format correction: Convert signal_type to CALL/PUT format
+            sig_upper = str(signal_type).upper()
+            target_direction = "CALL" if sig_upper in ["GREEN", "CALL"] else "PUT"
+            
             actual_result = "CALL" if close_price > open_price else "PUT"
-            res_status = "WIN" if actual_result == signal_type else "LOSS"
+            res_status = "WIN" if actual_result == target_direction else "LOSS"
             
             result_msg = (
                 f"✅ **QUOTEX RESULT: WIN 🎉**\n" if res_status == "WIN" else f"❌ **QUOTEX RESULT: LOSS 💔**\n"
@@ -109,4 +111,3 @@ def send_batch_summary(results_list):
         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": message, "parse_mode": "Markdown"}, timeout=5)
     except Exception as e:
         print(f"Batch Telegram Alert Error: {e}")
-        
